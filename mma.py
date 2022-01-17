@@ -5,6 +5,8 @@ import numpy as np
 import datetime
 from libs.Elo import Elo
 from libs.ufc_scraper import *
+import matplotlib.pyplot as mp
+import seaborn as sb
 
 pd.set_option('display.max_columns', 500)
 
@@ -63,23 +65,21 @@ def get_win_method_weight(x: str) -> float:
 
     return score
 
-def clean_fight_hist(hist_df):
-    # Clean history
-    hist_df = hist_df.iloc[::-1]  # invert the data so older fights are first
+def remove_draws(hist_df):
 
-    # Remove loser lines (loser lines are just mirror data of winner lines)
-    winner_hist_df = hist_df[hist_df.result == "W"]
+    # Just keep the majority dec, unanimous dec, split dec, sub, and KO finishes
+    keep = ["M-DEC", "U-DEC", "S-DEC", "SUB", "KO/TKO"]
+    # Don't ask, I copied it off a 0 point SO answer
+    finish_only_hist_df = hist_df[hist_df.method.apply(lambda txt:
+                                                    any([word_we_want in txt for word_we_want in keep]))]
 
     # Remove NC/DQ/Draws
-    # Don't ask, I copied it off a 0 point SO answer
-    keep = ["M-DEC", "U-DEC", "S-DEC", "SUB", "KO/TKO"]
-    clean_hist_df = winner_hist_df[winner_hist_df.method.apply(lambda txt:
-                                                               any([word_we_want in txt for word_we_want in keep]))]
+    no_draw_hist_df = finish_only_hist_df[finish_only_hist_df.result != "D"]
 
-    return clean_hist_df
+    return no_draw_hist_df
 
-def add_fighters(elo_scorer, clean_hist_df):
-    fighter_set = set(clean_hist_df['fighter'].unique().tolist() + clean_hist_df['opponent'].unique().tolist())
+def add_fighters(elo_scorer, unmirrored_hist_df):
+    fighter_set = set(unmirrored_hist_df['fighter'].unique().tolist() + unmirrored_hist_df['opponent'].unique().tolist())
     for f in fighter_set:
         elo_scorer.add_player(f)
 
@@ -98,34 +98,132 @@ def update_data():
 
     return fighter_df, hist_df
 
+def stat_differential(df, stat_index):
+    """
+    Stat indexes:
+        0 date
+        1 fight_url
+        2 event_url
+        3 result
+        4 fighter
+        5 opponent
+        6 division
+        7 method
+        8 round
+        9 time
+        10 fighter_url
+        11 opponent_url
+        12 knockdowns
+        13 sub_attempts
+        14 pass
+        15 reversals
+        16 takedowns_landed
+        17 takedowns_attempts
+        18 sig_strikes_landed
+        19 sig_strikes_attempts
+        20 total_strikes_landed
+        21 total_strikes_attempts
+        22 head_strikes_landed
+        23 head_strikes_attempts
+        24 body_strikes_landed
+        25 body_strikes_attempts
+        26 leg_strikes_landed
+        27 leg_strikes_attempts
+        28 distance_strikes_landed
+        29 distance_strikes_attempts
+        30 clinch_strikes_landed
+        31 clinch_strikes_attempts
+        32 ground_strikes_landed
+        33 ground_strikes_attempts
+    :param df: dataframe
+    :param cur_stat_index: index from the row tuple that the stat we're interested in is placed
+    :return: the list which will be appended as a column to the dataframe
+    """
+    #There is one extra stat at the beginning of the tuple, Index=432354 when you iter over the tuple
+    stat_index += 1
+    prev_fight = None
+    total_stat_diff = []
+    # Go through each row, save the previous values then divide to get strike diff
+    for row in df.itertuples():
+        cur_stat = row[stat_index]
+        # We can't divide by 0 so we just set an opponent with 0 stat to 1
+        # How is this gonna affect low number stats like takedowns or submissions?
+        if cur_stat == 0:
+            cur_stat = 1
+        fighter = row.fighter
+        opponent = row.opponent
+        if not prev_fight:
+            prev_fight = {fighter: cur_stat}
+            continue
+        elif row.opponent in prev_fight:
+            prev_diff = prev_fight[opponent] / cur_stat
+            cur_diff = cur_stat / prev_fight[opponent]
+            total_stat_diff.append(prev_diff)
+            total_stat_diff.append(cur_diff)
+            prev_fight = None
+        else:
+            raise Exception
+
+    return total_stat_diff
+
 def main():
 
     # Create Elo scorer
-    elo_scorer = Elo(k=80)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
+    elo_scorer = Elo(k=70)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
 
     # Update data
     fighter_df, hist_df = update_data()
 
-    # Clean the fight history of draws/NCs and reverse it so oldest fights are last
-    clean_hist_df = clean_fight_hist(hist_df)
+    # Invert the data so older fights are first
+    hist_df = hist_df.iloc[::-1]
+
+    # Clean the fight history of draws/NCs
+    no_draw_hist_df = remove_draws(hist_df)
+
+    # Convert result column from object to int64
+    no_draw_hist_df['result'] = no_draw_hist_df.result.str.replace('W', '1')
+    no_draw_hist_df['result'] = no_draw_hist_df.result.str.replace('L', '0')
+    no_draw_hist_df['result'] = no_draw_hist_df.result.astype(np.int64)
+
+    # Add second tier variables
+    # accuracy?
+    # Get a dictionary of row name : index number so we can call the index number in a for loop
+    new_vars_hist_df = no_draw_hist_df.copy()
+
+    differential_stats = {}
+    for idx, stat in enumerate(no_draw_hist_df):
+        # 13 is where the fight stats start and reversals are the only stat that is a string
+        if idx >= 12:
+            if stat != 'reversals':
+                differential_stats[stat] = idx
+
+    for stat in differential_stats:                          # this is the stat index within the row tuple
+        total_stat_diff = stat_differential(no_draw_hist_df, differential_stats[stat])
+        new_vars_hist_df[stat+'_differential'] = total_stat_diff
+
+    # Remove loser lines (loser lines are just mirror data of winner lines)
+    unmirrored_hist_df = no_draw_hist_df[no_draw_hist_df.result == 1]
 
     # Add fighters to ELO players
-    elo_scorer = add_fighters(elo_scorer, clean_hist_df)
+    elo_scorer = add_fighters(elo_scorer, unmirrored_hist_df)
 
     # Set up winner/loser elo dataframes
-    elo_win = np.zeros((len(clean_hist_df, )))
-    elo_los = np.zeros((len(clean_hist_df, )))
+    elo_win = np.zeros((len(unmirrored_hist_df, )))
+    elo_los = np.zeros((len(unmirrored_hist_df, )))
 
     # Run calc
     monthly_top10 = {}
     prev_date = datetime.datetime.strptime("October 1, 1993", "%B %d, %Y")
-    for idx, row in enumerate(clean_hist_df.itertuples()):
+    for idx, row in enumerate(unmirrored_hist_df.itertuples()):
 
         # Monthly top 10
         cur_date = datetime.datetime.strptime(row.date, "%B %d, %Y")
         if prev_date < cur_date:
+            # Sort by top fighter elo
             sorteddict = {k: v for k, v in sorted(elo_scorer.rating_dict.items(), key=lambda item: item[1])}
+            # Latest top 10
             top10 = list(sorteddict.items())[-10:]
+            # Monthly top10 callable via: monthly_top10["6/2010"]
             monthly_top10[str(prev_date.month) + '/' + str(prev_date.year)] = top10
             prev_date = cur_date
 
@@ -136,8 +234,8 @@ def main():
         elo_win[idx] = elo_scorer[winner]
         elo_los[idx] = elo_scorer[loser]
         elo_scorer.update_ratings(winner, loser, score)
-        clean_hist_df.loc[:, 'elo_win'] = elo_win
-        clean_hist_df.loc[:, 'elo_los'] = elo_los
+        unmirrored_hist_df.loc[:, 'elo_win'] = elo_win
+        unmirrored_hist_df.loc[:, 'elo_los'] = elo_los
 
 
     #> monthly_top10["6/2010"]

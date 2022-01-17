@@ -31,3 +31,13 @@ class FightData():
 # Links
 https://medium.com/geekculture/ranking-mma-fighters-using-the-elo-rating-system-2704adbf0c94
 https://www.kaggle.com/calmdownkarm/ufc-predictor-and-notes
+
+# [2:] prevents win corr with itself and win corr with round
+c = no_draw_hist_df.corr()["result"][2:].round(5)
+# heatmap it, the double bracket reshapes it into the right size
+c = no_draw_hist_df.corr()[["result"]]
+b = sns.heatmap(c, annot=True, fmt="g", cmap='viridis')
+plt.show()
+
+#Sort correlation
+c = new_vars_hist_df.corr()[["result"]].sort_values("result")
