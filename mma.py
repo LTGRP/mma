@@ -7,7 +7,10 @@ from libs.Elo import Elo
 from libs.ufc_scraper import *
 import matplotlib.pyplot as mp
 import seaborn as sb
-
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import brier_score_loss
 pd.set_option('display.max_columns', 500)
 
 def update(fight_hist, fight_stats):
@@ -147,7 +150,7 @@ def stat_differential(df, stat_index):
     for row in df.itertuples():
         cur_stat = row[stat_index]
         # We can't divide by 0 so we just set an opponent with 0 stat to 1
-        # How is this gonna affect low number stats like takedowns or submissions?
+        # How is this gonna affect low number stats like takedowns or submissions? Probably not much I hope
         if cur_stat == 0:
             cur_stat = 1
         fighter = row.fighter
@@ -200,6 +203,34 @@ def main():
     for stat in differential_stats:                          # this is the stat index within the row tuple
         total_stat_diff = stat_differential(no_draw_hist_df, differential_stats[stat])
         new_vars_hist_df[stat+'_differential'] = total_stat_diff
+
+    ##########
+    y = new_vars_hist_df["result"]
+    # reversals is a string
+    train_df = new_vars_hist_df.copy().drop(columns="reversals")
+
+    # Toss all the objects and leave all the int64 stats
+    for idx, col in enumerate(new_vars_hist_df):
+        if idx < 12:
+            train_df = train_df.drop(columns=col)
+
+    brier_score = {}
+    y = new_vars_hist_df["result"]
+    for col in train_df:
+        X = train_df[[col]]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        lr = LogisticRegression(max_iter=3000)
+        lr.fit(X_train, y_train)
+        score = lr.score(X_test, y_test)
+
+        # Brier scar
+        probs = lr.predict_proba(X_test)
+        probs = probs[:, 1]  # Keeping only the values in positive label
+        loss = brier_score_loss(y_test, probs)
+        brier_score[col] = loss
+    embed()
+
+    #######
 
     # Remove loser lines (loser lines are just mirror data of winner lines)
     unmirrored_hist_df = no_draw_hist_df[no_draw_hist_df.result == 1]
