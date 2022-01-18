@@ -40,4 +40,4 @@ b = sns.heatmap(c, annot=True, fmt="g", cmap='viridis')
 plt.show()
 
 #Sort correlation
-c = new_vars_hist_df.corr()[["result"]].sort_values("result")
+c = new_vars_hist_df.corr()[["result"]].sort_values("result", ascending=False).round(8)

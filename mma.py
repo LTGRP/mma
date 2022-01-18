@@ -169,7 +169,7 @@ def stat_differential(df, stat_index):
 def main():
 
     # Create Elo scorer
-    elo_scorer = Elo(k=70)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
+    elo_scorer = Elo(k=75)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
 
     # Update data
     fighter_df, hist_df = update_data()
@@ -212,19 +212,19 @@ def main():
     elo_los = np.zeros((len(unmirrored_hist_df, )))
 
     # Run calc
-    monthly_top10 = {}
+    monthly_top25 = {}
     prev_date = datetime.datetime.strptime("October 1, 1993", "%B %d, %Y")
     for idx, row in enumerate(unmirrored_hist_df.itertuples()):
 
-        # Monthly top 10
+        # Monthly top 25
         cur_date = datetime.datetime.strptime(row.date, "%B %d, %Y")
         if prev_date < cur_date:
             # Sort by top fighter elo
             sorteddict = {k: v for k, v in sorted(elo_scorer.rating_dict.items(), key=lambda item: item[1])}
-            # Latest top 10
-            top10 = list(sorteddict.items())[-10:]
+            # Latest top 25
+            top25 = list(sorteddict.items())[-25:]
             # Monthly top10 callable via: monthly_top10["6/2010"]
-            monthly_top10[str(prev_date.month) + '/' + str(prev_date.year)] = top10
+            monthly_top25[str(prev_date.month) + '/' + str(prev_date.year)] = top25
             prev_date = cur_date
 
         winner = row.fighter
