@@ -4,8 +4,11 @@ import pandas as pd
 import re
 from IPython import embed
 
-#function for getting individual fight stats
+
 def get_fight_stats(url):
+    """
+    Gets individual fight stats
+    """
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     fd_columns = {'fighter':[], 'knockdowns':[],'sig_strikes':[], 'total_strikes':[], 'takedowns':[], 'sub_attempts':[], 'pass':[],
@@ -98,8 +101,10 @@ def get_fight_stats(url):
                         'clinch_strikes', 'ground_strikes'], axis = 1)
         return(cfd)
 
-#function for getting fight stats for all fights on a card
 def get_fight_card(url):
+    """
+    Gets fight stats for all fights on a card
+    """
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     
@@ -163,8 +168,10 @@ def get_fight_card(url):
     fight_card = fight_card.reset_index(drop = True)
     return fight_card
 
-#function that gets stats on all fights on all cards
 def get_all_fight_stats():
+    """
+    Gets stats on all fights on all cards
+    """
     url = 'http://ufcstats.com/statistics/events/completed?page=all'
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser") 
@@ -179,41 +186,13 @@ def get_all_fight_stats():
         fight_stats = pd.concat([fight_stats, stats], axis = 0)
         
     fight_stats = fight_stats.reset_index(drop = True)
-    return fight_stats      
+    return fight_stats
 
-#gets individual fighter attributes
-def get_fighter_details(fighter_urls):
-    fighter_details = {'name':[], 'height':[], 'reach':[], 'stance':[], 'dob':[], 'url':[]}
-
-    for f_url in fighter_urls:
-        print(f_url)
-        page = requests.get(f_url)
-        soup = BeautifulSoup(page.content, "html.parser")
-
-        fighter_name = soup.find('span', class_ = 'b-content__title-highlight').text.strip()
-        fighter_details['name'].append(fighter_name)
-        
-        fighter_details['url'].append(f_url)
-
-        fighter_attr = soup.find('div', class_ = 'b-list__info-box b-list__info-box_style_small-width js-guide').select('li')
-        for i in range(len(fighter_attr)):
-            attr = fighter_attr[i].text.split(':')[-1].strip()
-            if i == 0:
-                fighter_details['height'].append(attr)
-            elif i == 1:
-                pass #weight is always just whatever weightclass they were fighting at
-            elif i == 2:
-                fighter_details['reach'].append(attr)
-            elif i == 3:
-                fighter_details['stance'].append(attr)
-            else:
-                fighter_details['dob'].append(attr)
-
-
-    return pd.DataFrame(fighter_details)  
-
-#updates fight stats with newer fights
-def update_fight_stats(old_stats): #takes dataframe of fight stats as input
+def update_fight_stats(old_stats):
+    """
+    Updates fight stats with newer fights
+    takes dataframe of fight stats as input
+    """
     url = 'http://ufcstats.com/statistics/events/completed?page=all'
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser") 
@@ -233,12 +212,15 @@ def update_fight_stats(old_stats): #takes dataframe of fight stats as input
     
     updated_stats = pd.concat([new_stats, old_stats], axis = 0)
     updated_stats = updated_stats.reset_index(drop = True)
+
     return(updated_stats)
 
-#updates fighter attributes with new fighters not yet saved yet
 def update_fighter_details(fighter_urls, saved_fighters):
+    """
+    Updates fighter attributes with new fighters not yet saved yet
+    """
     fighter_details = {'name':[], 'height':[], 'reach':[], 'stance':[], 'dob':[], 'url':[]}
-    fighter_urls = set(fighter_urls)
+    #fighter_urls = set(fighter_urls)
     saved_fighter_urls = set(saved_fighters.url.unique())
 
     for f_url in fighter_urls:
@@ -254,6 +236,7 @@ def update_fighter_details(fighter_urls, saved_fighters):
 
             fighter_details['url'].append(f_url)
 
+            # Stat box 1
             fighter_attr = soup.find('div', class_ = 'b-list__info-box b-list__info-box_style_small-width js-guide').select('li')
             for i in range(len(fighter_attr)):
                 attr = fighter_attr[i].text.split(':')[-1].strip()
@@ -269,13 +252,26 @@ def update_fighter_details(fighter_urls, saved_fighters):
                     fighter_details['dob'].append(attr)
 
             # Added by Dan McInerney
-            fighter_stats = soup.find('div', class_='b-list__info-box-left clearfix').select('li')
+            # Stat box 2
+            fighter_stats = soup.find('div', class_='b-list__info-box b-list__info-box_style_middle-width js-guide clearfix').select('li')
             for x in fighter_stats:
                 line = x.text.split(":")
                 if len(line) > 1: # prevents the \n\n\n\n lines from being read
-                    label = line[0].strip().replace('.', '')
-                    stat = line[1].strip()
-                    fighter_details[label] = stat
+                    label = line[0].strip().replace('.', '').replace(' ', '_')
+                    stat = line[1].strip().replace('%', '')
+                    if label in fighter_details:
+                        fighter_details[label].append(stat)
+                    else:
+                        fighter_details[label] = [stat]
+
+            # Stat box 3
+            label = "num_fights"
+            ufc_fights = soup.find_all("a", href = re.compile(r"ufcstats\.com/event-details/"))
+            num_fights = len(ufc_fights)
+            if label in fighter_details:
+                fighter_details[label].append(num_fights)
+            else:
+                fighter_details[label] = [num_fights]
 
     new_fighters = pd.DataFrame(fighter_details)
     updated_fighters = pd.concat([new_fighters, saved_fighters])

@@ -1,6 +1,5 @@
 from IPython import embed
 import pandas as pd
-from libs.ufc_scraper import update_fight_stats, update_fighter_details
 import numpy as np
 import datetime
 from libs.Elo import Elo
@@ -148,6 +147,7 @@ def stat_differential(df, stat_index, differential=False, accuracy=False):
     total_stat_diff = []
     # Go through each row, save the previous values then divide to get strike diff
     for row in df.itertuples():
+        # Implement acc here (attempted/landed)
         if accuracy:
             pass
         elif differential:
@@ -278,6 +278,7 @@ def main():
     #> monthly_top10["6/2010"]
     #> top10
     #> elo_scorer.rating_dict["Anderson Silva"]
+    embed()
 
 if __name__ == "__main__":
     main()

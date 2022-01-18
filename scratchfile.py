@@ -36,100 +36,99 @@ https://www.kaggle.com/calmdownkarm/ufc-predictor-and-notes
 c = no_draw_hist_df.corr()["result"][2:].round(5)
 # heatmap it, the double bracket reshapes it into the right size
 c = no_draw_hist_df.corr()[["result"]]
-b = sns.heatmap(c, annot=True, fmt="g", cmap='viridis')
-plt.show()
+b = sns.heatmap(c, annot=True, fmt="g", cmap='viridis')mp.show()
 
 #Sort correlation
 c = new_vars_hist_df.corr()[["result"]].sort_values("result", ascending=False).round(8)
 
 brier_score_eq = {k: v for k, v in sorted(brier_score.items(), key=lambda item: item[1])}
 brier_score_output = \
-{'head_strikes_landed_differential': 0.1535420666907371,
- 'sig_strikes_landed_differential': 0.15440052505608137,
- 'total_strikes_landed_differential': 0.16684946969506367,
- 'ground_strikes_landed_differential': 0.18356124206225843,
- 'total_strikes_attempts_differential': 0.1859257823948968,
- 'ground_strikes_attempts_differential': 0.18901361186811344,
- 'sig_strikes_attempts_differential': 0.1931577073516428,
- 'head_strikes_attempts_differential': 0.1970488120785045,
- 'ground_strikes_landed': 0.20879437316539054,
- 'ground_strikes_attempts': 0.21336574389522678,
- 'pass_differential': 0.21715630918323986,
- 'knockdowns': 0.2206966340314761,
- 'distance_strikes_landed_differential': 0.22201280133890522,
- 'total_strikes_landed': 0.22525458006270296,
- 'pass': 0.2293044805515032,
- 'takedowns_landed_differential': 0.23098213182683555,
- 'head_strikes_landed': 0.2315946918306528,
- 'sig_strikes_landed': 0.23274713186535176,
- 'takedowns_landed': 0.235624273098802,
- 'clinch_strikes_landed_differential': 0.2375601558704735,
- 'body_strikes_landed_differential': 0.2376657040052689,
- 'clinch_strikes_attempts_differential': 0.24009270848302297,
- 'sub_attempts': 0.2404508501707163,
- 'total_strikes_attempts': 0.24047504495809233,
- 'knockdowns_differential': 0.24387098915478775,
- 'body_strikes_attempts_differential': 0.24389680178946874,
- 'sub_attempts_differential': 0.2440893869894121,
- 'head_strikes_attempts': 0.2450754112106454,
- 'clinch_strikes_landed': 0.24580552903517047,
- 'distance_strikes_landed': 0.24590036977166851,
- 'body_strikes_landed': 0.24638102366003264,
- 'clinch_strikes_attempts': 0.2466824075220038,
- 'distance_strikes_attempts_differential': 0.2467464035968645,
- 'sig_strikes_attempts': 0.24714964423567115,
- 'takedowns_attempts_differential': 0.24800733308835576,
- 'body_strikes_attempts': 0.24809686558682328,
- 'leg_strikes_landed': 0.2484269483369769,
- 'leg_strikes_landed_differential': 0.24845707173917594,
- 'leg_strikes_attempts_differential': 0.2488781210130024,
- 'takedowns_attempts': 0.24951650744446785,
- 'distance_strikes_attempts': 0.24965223054889166,
- 'leg_strikes_attempts': 0.25020488798707824}
+{'head_strikes_landed_differential': 0.14943366168949745,
+ 'sig_strikes_landed_differential': 0.15136372295375505,
+ 'total_strikes_landed_differential': 0.1559420335007692,
+ 'total_strikes_attempts_differential': 0.18135058814178381,
+ 'ground_strikes_landed_differential': 0.18304686145901417,
+ 'ground_strikes_attempts_differential': 0.18669310881417725,
+ 'sig_strikes_attempts_differential': 0.1904116230302404,
+ 'head_strikes_attempts_differential': 0.20137211969018237,
+ 'ground_strikes_landed': 0.20597877034310552,
+ 'ground_strikes_attempts': 0.21154433723263055,
+ 'distance_strikes_landed_differential': 0.2211012578434788,
+ 'knockdowns': 0.22169781365368596,
+ 'head_strikes_landed': 0.22864909205334744,
+ 'total_strikes_landed': 0.2296788051905403,
+ 'takedowns_landed_differential': 0.23164476413526475,
+ 'takedowns_landed': 0.23325326533002208,
+ 'sig_strikes_landed': 0.23598530062579554,
+ 'total_strikes_attempts': 0.23892418768345777,
+ 'sub_attempts': 0.2398577861044575,
+ 'body_strikes_landed_differential': 0.240069966888866,
+ 'clinch_strikes_attempts_differential': 0.24024716343467087,
+ 'knockdowns_differential': 0.24081013699655604,
+ 'clinch_strikes_landed_differential': 0.2415314023168161,
+ 'clinch_strikes_landed': 0.24488275055601144,
+ 'body_strikes_attempts_differential': 0.24489809918989408,
+ 'sig_strikes_attempts': 0.24510194840874505,
+ 'sub_attempts_differential': 0.24541013253356064,
+ 'clinch_strikes_attempts': 0.2460430148878946,
+ 'body_strikes_landed': 0.246219692531269,
+ 'leg_strikes_landed_differential': 0.24753219896157821,
+ 'distance_strikes_attempts_differential': 0.2478353701709483,
+ 'leg_strikes_landed': 0.24793025740347663,
+ 'distance_strikes_landed': 0.24798888646464132,
+ 'takedowns_attempts': 0.2481873443543807,
+ 'body_strikes_attempts': 0.24820899591692222,
+ 'takedowns_attempts_differential': 0.24883153509793335,
+ 'head_strikes_attempts': 0.2489605633173813,
+ 'distance_strikes_attempts': 0.24908720711416965,
+ 'leg_strikes_attempts_differential': 0.24926103976519937,
+ 'leg_strikes_attempts': 0.24937371649779105,
+ 'pass_differential': 0.2501389635919092,
+ 'pass': 0.2502037492343585}
 
-correlation
-ground_strikes_landed_differential      0.366250
-head_strikes_landed_differential        0.350861
-ground_strikes_attempts_differential    0.350042
-ground_strikes_landed                   0.349596
-ground_strikes_attempts                 0.339408
-sig_strikes_landed_differential         0.320490
-knockdowns                              0.314140
-pass_differential                       0.288768
-total_strikes_landed                    0.280435
-total_strikes_landed_differential       0.273722
-pass                                    0.268515
-head_strikes_landed                     0.267821
-takedowns_landed_differential           0.253893
-head_strikes_attempts_differential      0.241788
-sig_strikes_attempts_differential       0.241037
-takedowns_landed                        0.240375
-distance_strikes_landed_differential    0.240207
-sig_strikes_landed                      0.240010
-total_strikes_attempts_differential     0.233791
-total_strikes_attempts                  0.187586
-clinch_strikes_landed_differential      0.187260
-body_strikes_landed_differential        0.182374
-sub_attempts                            0.170395
-knockdowns_differential                 0.165951
-clinch_strikes_attempts_differential    0.163967
-body_strikes_attempts_differential      0.142654
-clinch_strikes_landed                   0.133630
-head_strikes_attempts                   0.129801
-sig_strikes_attempts                    0.129710
-body_strikes_landed                     0.129136
-sub_attempts_differential               0.128094
-distance_strikes_landed                 0.118644
-clinch_strikes_attempts                 0.114591
-body_strikes_attempts                   0.093274
-distance_strikes_attempts_differential  0.092817
-leg_strikes_landed_differential         0.091076
-takedowns_attempts_differential         0.088474
-takedowns_attempts                      0.086023
-leg_strikes_landed                      0.075877
-leg_strikes_attempts_differential       0.066589
-leg_strikes_attempts                    0.059770
-distance_strikes_attempts               0.050142
-round                                   0.000000
+.corr() correlation
+ground_strikes_landed_differential      0.366390
+head_strikes_landed_differential        0.351367
+ground_strikes_attempts_differential    0.350278
+ground_strikes_landed                   0.349744
+ground_strikes_attempts                 0.339564
+sig_strikes_landed_differential         0.320761
+knockdowns                              0.314320
+total_strikes_landed                    0.280910
+total_strikes_landed_differential       0.273236
+head_strikes_landed                     0.268093
+takedowns_landed_differential           0.254087
+head_strikes_attempts_differential      0.242299
+sig_strikes_attempts_differential       0.240814
+sig_strikes_landed                      0.240410
+takedowns_landed                        0.240389
+distance_strikes_landed_differential    0.239981
+total_strikes_attempts_differential     0.233659
+clinch_strikes_landed_differential      0.188320
+total_strikes_attempts                  0.187949
+body_strikes_landed_differential        0.182988
+sub_attempts                            0.169857
+knockdowns_differential                 0.165670
+clinch_strikes_attempts_differential    0.164458
+body_strikes_attempts_differential      0.143152
+clinch_strikes_landed                   0.134039
+head_strikes_attempts                   0.129995
+sig_strikes_attempts                    0.129970
+body_strikes_landed                     0.129682
+sub_attempts_differential               0.127669
+distance_strikes_landed                 0.118837
+clinch_strikes_attempts                 0.114919
+body_strikes_attempts                   0.093753
+distance_strikes_attempts_differential  0.092653
+leg_strikes_landed_differential         0.091145
+takedowns_attempts_differential         0.088399
+takedowns_attempts                      0.085927
+leg_strikes_landed                      0.076051
+leg_strikes_attempts_differential       0.066489
+leg_strikes_attempts                    0.059856
+distance_strikes_attempts               0.050295
+pass                                    0.026410
+pass_differential                       0.019454
+round                                  -0.000000
 
 
