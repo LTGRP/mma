@@ -101,7 +101,7 @@ def update_data():
 
     return fighter_df, hist_df
 
-def stat_differential(df, stat_index):
+def stat_differential(df, stat_index, differential=False, accuracy=False):
     """
     Stat indexes:
         0 date
@@ -148,26 +148,57 @@ def stat_differential(df, stat_index):
     total_stat_diff = []
     # Go through each row, save the previous values then divide to get strike diff
     for row in df.itertuples():
-        cur_stat = row[stat_index]
-        # We can't divide by 0 so we just set an opponent with 0 stat to 1
-        # How is this gonna affect low number stats like takedowns or submissions? Probably not much I hope
-        if cur_stat == 0:
-            cur_stat = 1
-        fighter = row.fighter
-        opponent = row.opponent
-        if not prev_fight:
-            prev_fight = {fighter: cur_stat}
-            continue
-        elif row.opponent in prev_fight:
-            prev_diff = prev_fight[opponent] / cur_stat
-            cur_diff = cur_stat / prev_fight[opponent]
-            total_stat_diff.append(prev_diff)
-            total_stat_diff.append(cur_diff)
-            prev_fight = None
-        else:
-            raise Exception
+        if accuracy:
+            pass
+        elif differential:
+            cur_stat = row[stat_index]
+            # We can't divide by 0 so we just set an opponent with 0 stat to 1
+            # How is this gonna affect low number stats like takedowns or submissions? Probably not much I hope
+            if cur_stat == 0:
+                cur_stat = 1
+            fighter = row.fighter
+            opponent = row.opponent
+            if not prev_fight:
+                prev_fight = {fighter: cur_stat}
+                continue
+            elif row.opponent in prev_fight:
+                prev_diff = prev_fight[opponent] / cur_stat
+                cur_diff = cur_stat / prev_fight[opponent]
+                total_stat_diff.append(prev_diff)
+                total_stat_diff.append(cur_diff)
+                prev_fight = None
+            else:
+                raise Exception
 
     return total_stat_diff
+
+def calc_brier_score(new_vars_hist_df):
+    y = new_vars_hist_df["result"]
+    # reversals is a string
+    train_df = new_vars_hist_df.copy().drop(columns="reversals")
+
+    # Toss all the objects and leave all the int64 stats
+    for idx, col in enumerate(new_vars_hist_df):
+        if idx < 12:
+            train_df = train_df.drop(columns=col)
+
+    brier_score = {}
+    y = new_vars_hist_df["result"]
+    for col in train_df:
+        # Logistic regression
+        X = train_df[[col]]  # double [[]] to made it a 2D array
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        lr = LogisticRegression(max_iter=3000)
+        lr.fit(X_train, y_train)
+        score = lr.score(X_test, y_test)
+
+        # Brier score
+        probs = lr.predict_proba(X_test)
+        probs = probs[:, 1]  # Keeping only the values in positive label
+        loss = brier_score_loss(y_test, probs)
+        brier_score[col] = loss
+
+    return brier_score
 
 def main():
 
@@ -201,36 +232,11 @@ def main():
                 differential_stats[stat] = idx
 
     for stat in differential_stats:                          # this is the stat index within the row tuple
-        total_stat_diff = stat_differential(no_draw_hist_df, differential_stats[stat])
+        total_stat_diff = stat_differential(no_draw_hist_df, differential_stats[stat], differential=True)
         new_vars_hist_df[stat+'_differential'] = total_stat_diff
 
-    ##########
-    y = new_vars_hist_df["result"]
-    # reversals is a string
-    train_df = new_vars_hist_df.copy().drop(columns="reversals")
-
-    # Toss all the objects and leave all the int64 stats
-    for idx, col in enumerate(new_vars_hist_df):
-        if idx < 12:
-            train_df = train_df.drop(columns=col)
-
-    brier_score = {}
-    y = new_vars_hist_df["result"]
-    for col in train_df:
-        X = train_df[[col]]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-        lr = LogisticRegression(max_iter=3000)
-        lr.fit(X_train, y_train)
-        score = lr.score(X_test, y_test)
-
-        # Brier scar
-        probs = lr.predict_proba(X_test)
-        probs = probs[:, 1]  # Keeping only the values in positive label
-        loss = brier_score_loss(y_test, probs)
-        brier_score[col] = loss
-    embed()
-
-    #######
+    # Calculate brier score for each variable
+    brier_score = calc_brier_score(new_vars_hist_df)
 
     # Remove loser lines (loser lines are just mirror data of winner lines)
     unmirrored_hist_df = no_draw_hist_df[no_draw_hist_df.result == 1]
@@ -272,7 +278,6 @@ def main():
     #> monthly_top10["6/2010"]
     #> top10
     #> elo_scorer.rating_dict["Anderson Silva"]
-    embed()
 
 if __name__ == "__main__":
     main()

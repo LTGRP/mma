@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
+from IPython import embed
 
 #function for getting individual fight stats
 def get_fight_stats(url):
@@ -207,6 +208,8 @@ def get_fighter_details(fighter_urls):
                 fighter_details['stance'].append(attr)
             else:
                 fighter_details['dob'].append(attr)
+
+
     return pd.DataFrame(fighter_details)  
 
 #updates fight stats with newer fights
@@ -264,6 +267,16 @@ def update_fighter_details(fighter_urls, saved_fighters):
                     fighter_details['stance'].append(attr)
                 else:
                     fighter_details['dob'].append(attr)
+
+            # Added by Dan McInerney
+            fighter_stats = soup.find('div', class_='b-list__info-box-left clearfix').select('li')
+            for x in fighter_stats:
+                line = x.text.split(":")
+                if len(line) > 1: # prevents the \n\n\n\n lines from being read
+                    label = line[0].strip().replace('.', '')
+                    stat = line[1].strip()
+                    fighter_details[label] = stat
+
     new_fighters = pd.DataFrame(fighter_details)
     updated_fighters = pd.concat([new_fighters, saved_fighters])
     updated_fighters = updated_fighters.reset_index(drop = True)
