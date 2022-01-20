@@ -41,6 +41,16 @@ b = sns.heatmap(c, annot=True, fmt="g", cmap='viridis')mp.show()
 #Sort correlation
 c = new_vars_hist_df.corr()[["result"]].sort_values("result", ascending=False).round(8)
 
+# See historically largest elo
+h = []
+for x in historical_elo:
+    for y in historical_elo[x]:
+        elo = y[1]
+        name = x
+        h.append((name, elo))
+h.sort(key=lambda z: z[1])
+
+
 brier_score_eq = {k: v for k, v in sorted(brier_score.items(), key=lambda item: item[1])}
 brier_score_output = \
 {'head_strikes_landed_differential': 0.14943366168949745,
@@ -131,4 +141,33 @@ pass                                    0.026410
 pass_differential                       0.019454
 round                                  -0.000000
 
+Strikes landed per min / strikes absorbed per min
+sorted([(x,3),(y,2)], key=lambda x: x[1])
 
+[('Tom Aspinall', 3.0337552742616034),
+ ('Uros Medic', 3.0789473684210527),
+ ('Gegard Mousasi', 3.0991735537190084),
+ ('Dave Galera', 3.1509433962264146),
+ ('Maiquel Falcao', 3.1509433962264146),
+ ('Mike Jackson', 3.195488721804511),
+ ('Cristiane Justino', 3.2355555555555555),
+ ('Tatiana Suarez', 3.324137931034483),
+ ('Mike King', 3.4418604651162794),
+ ('Mike Guymon', 3.481012658227848),
+ ('Ronnie Lawrence', 3.4862385321100913),
+ ('Jesse Taylor', 3.527272727272727),
+ ('Umar Nurmagomedov', 3.567901234567901),
+ ('Alex Pereira', 3.649122807017544),
+ ('Johnny Rees', 3.916666666666667),
+ ('Mike Nickels', 4.0),
+ ('Adlan Amagov', 4.01219512195122),
+ ('Carlston Harris', 4.149606299212598),
+ ('Ottman Azaitar', 4.7897727272727275),
+ ('Keith Rockel', 5.3809523809523805),
+ ('Ebenezer Fontes Braga', 5.761904761904762),
+ ('Khalid Murtazaliev', 11.999999999999998),
+ ('Tom Murphy', 14.705882352941176),
+ ('Abdul-Kerim Edilov', 78.61538461538461),
+ ('Khamzat Chimaev', 108.5)]
+
+)

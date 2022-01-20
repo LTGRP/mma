@@ -200,10 +200,19 @@ def calc_brier_score(new_vars_hist_df):
 
     return brier_score
 
+def peak_elo(historical_elo, name):
+    s = historical_elo[name]
+    s.sort(key=lambda x: x[1])
+    peak = s[-1]
+    return peak
+
+
+
+
 def main():
 
     # Create Elo scorer
-    elo_scorer = Elo(k=75)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
+    elo_scorer = Elo(k=46)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
 
     # Update data
     fighter_df, hist_df = update_data()
@@ -248,6 +257,8 @@ def main():
     elo_win = np.zeros((len(unmirrored_hist_df, )))
     elo_los = np.zeros((len(unmirrored_hist_df, )))
 
+    historical_elo = {}
+
     # Run calc
     monthly_top25 = {}
     prev_date = datetime.datetime.strptime("October 1, 1993", "%B %d, %Y")
@@ -266,7 +277,6 @@ def main():
 
         winner = row.fighter
         loser = row.opponent
-
         score = get_win_method_weight(row)
         elo_win[idx] = elo_scorer[winner]
         elo_los[idx] = elo_scorer[loser]
@@ -274,10 +284,20 @@ def main():
         unmirrored_hist_df.loc[:, 'elo_win'] = elo_win
         unmirrored_hist_df.loc[:, 'elo_los'] = elo_los
 
+        if winner in historical_elo:
+            historical_elo[winner].append((loser, elo_scorer[winner]))
+        else:
+            historical_elo[winner] = [(loser, elo_scorer[winner])]
+        if loser in historical_elo:
+            historical_elo[loser].append((winner,elo_scorer[loser]))
+        else:
+            historical_elo[loser] = [(winner, elo_scorer[loser])]
 
-    #> monthly_top10["6/2010"]
-    #> top10
-    #> elo_scorer.rating_dict["Anderson Silva"]
+
+    #> monthly_top25["6/2010"]
+    #> top25
+    #> elo_scorer["Anderson Silva"]
+    #> peak_elo(historical_elo, "Anderson Silva")
     embed()
 
 if __name__ == "__main__":
