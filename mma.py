@@ -145,11 +145,14 @@ def stat_differential(df, stat_index, differential=False, accuracy=False):
     stat_index += 1
     prev_fight = None
     total_stat_diff = []
+
     # Go through each row, save the previous values then divide to get strike diff
     for row in df.itertuples():
         # Implement acc here (attempted/landed)
         if accuracy:
             pass
+
+        # Calc the differential
         elif differential:
             cur_stat = row[stat_index]
             # We can't divide by 0 so we just set an opponent with 0 stat to 1
@@ -257,9 +260,8 @@ def main():
     elo_win = np.zeros((len(unmirrored_hist_df, )))
     elo_los = np.zeros((len(unmirrored_hist_df, )))
 
-    historical_elo = {}
-
     # Run calc
+    historical_elo = {}
     monthly_top25 = {}
     prev_date = datetime.datetime.strptime("October 1, 1993", "%B %d, %Y")
     for idx, row in enumerate(unmirrored_hist_df.itertuples()):
@@ -289,15 +291,54 @@ def main():
         else:
             historical_elo[winner] = [(loser, elo_scorer[winner])]
         if loser in historical_elo:
-            historical_elo[loser].append((winner,elo_scorer[loser]))
+            historical_elo[loser].append((winner, elo_scorer[loser]))
         else:
             historical_elo[loser] = [(winner, elo_scorer[loser])]
 
 
-    #> monthly_top25["6/2010"]
-    #> top25
-    #> elo_scorer["Anderson Silva"]
-    #> peak_elo(historical_elo, "Anderson Silva")
+    # Create fighter df with diff avg column and counted fights so we know how much to divide the diff avg from
+    avg_hist_diff_fighter = fighter_df.copy()
+    avg_hist_diff_fighter.loc[:, "counted_fights"] = 0
+
+    # Create fight df with fight stats, diff stats, and historical avg diff up to that fight
+    # Add new columns to fighter df
+    avg_hist_diff_fights = new_vars_hist_df.copy()
+    for col in new_vars_hist_df:
+        if "differential" in col:
+            avg_hist_diff_fights.loc[:, "historical_avg_" + col] = 0
+            avg_hist_diff_fighter.loc[:, "avg_" + col] = 0
+
+    for row in new_vars_hist_df.itertuples():
+        print(row.Index)
+        f = row.fighter
+
+        # Add to the counted fights
+        fighter_index = avg_hist_diff_fighter.loc[avg_hist_diff_fighter["name"] == f].index
+        avg_hist_diff_fighter.loc[fighter_index, "counted_fights"] += 1
+        # Add to fighter stats (row values past enum index of 34 are differential stats)
+        for idx, s in enumerate(row):
+            if idx > 34: # fight differential stats index start
+                i = 16 # fighter diff stat index start
+                stat = s +
+                avg_hist_diff_fighter.iloc[fighter_index, i] = stat_avg
+                i += 1
+
+        if row.Index < 12000:
+            embed()
+
+
+        # 55 thry 76 are the indexes of the differential stats in newvarshistdf
+        #avg_hist_diff_fighter.loc[fighter_index, 16:] = new_vars_hist_df.iloc[s.index, 55:]
+        #hist avg diff in avg hist diff fight = 55 76
+        #for range in (55, 77):
+        #34 thru 54 index of new_vars_hist_df
+        # The historical avg differentials are indexes 16 thru 37 in fighter df
+
+    # > monthly_top25["6/2010"]
+    # > top25
+    # > elo_scorer["Anderson Silva"]
+    # > peak_elo(historical_elo, "Anderson Silva")
+
     embed()
 
 if __name__ == "__main__":
