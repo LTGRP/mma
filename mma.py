@@ -155,18 +155,23 @@ def stat_differential(df, stat_index, differential=False, accuracy=False):
         # Calc the differential
         elif differential:
             cur_stat = row[stat_index]
-            # We can't divide by 0 so we just set an opponent with 0 stat to 1
-            # How is this gonna affect low number stats like takedowns or submissions? Probably not much I hope
-            if cur_stat == 0:
-                cur_stat = 1
             fighter = row.fighter
             opponent = row.opponent
             if not prev_fight:
                 prev_fight = {fighter: cur_stat}
                 continue
             elif row.opponent in prev_fight:
-                prev_diff = prev_fight[opponent] / cur_stat
-                cur_diff = cur_stat / prev_fight[opponent]
+
+                try:
+                    prev_diff = prev_fight[opponent] / cur_stat
+                except ZeroDivisionError:
+                    prev_diff = 0
+
+                try:
+                    cur_diff = cur_stat / prev_fight[opponent]
+                except ZeroDivisionError:
+                    cur_diff = 0
+
                 total_stat_diff.append(prev_diff)
                 total_stat_diff.append(cur_diff)
                 prev_fight = None
@@ -306,25 +311,47 @@ def main():
     for col in new_vars_hist_df:
         if "differential" in col:
             avg_hist_diff_fights.loc[:, "historical_avg_" + col] = 0
-            avg_hist_diff_fighter.loc[:, "avg_" + col] = 0
+            avg_hist_diff_fighter.loc[:, "total_" + col] = 0
 
     for row in new_vars_hist_df.itertuples():
-        print(row.Index)
         f = row.fighter
+        fighter_index = avg_hist_diff_fighter.loc[avg_hist_diff_fighter["name"] == f].index
+
+        # Add fighter differentials coming into the fight (not including the fight)
+        fighter_counted_fights = avg_hist_diff_fighter.loc[fighter_index].counted_fights.values[0]
+
+        # Get all the total differential values and divide them by
+        all_diffs = []
+        for c in avg_hist_diff_fighter.loc[fighter_index].iteritems():
+            stat = c[1].values[0]
+            col = c[0]
+            if "total_" in col:
+                if fighter_counted_fights == 0:
+                    all_diffs.append(stat)
+                else:
+                    all_diffs.append(stat/fighter_counted_fights)
+
+        # Get the historical fighter diff stats column names
+        cols = []
+        for x in avg_hist_diff_fights:
+            if "historical" in x:
+                cols.append(x)
+
+        avg_hist_diff_fights.loc[row.Index, cols] = all_diffs
+
 
         # Add to the counted fights
-        fighter_index = avg_hist_diff_fighter.loc[avg_hist_diff_fighter["name"] == f].index
         avg_hist_diff_fighter.loc[fighter_index, "counted_fights"] += 1
         # Add to fighter stats (row values past enum index of 34 are differential stats)
+        i = 16  # fighter diff stat index start, 36 is end
         for idx, s in enumerate(row):
-            if idx > 34: # fight differential stats index start
-                i = 16 # fighter diff stat index start
-                stat = s +
-                avg_hist_diff_fighter.iloc[fighter_index, i] = stat_avg
+            if idx > 34: # fight differential stats index start, ends at 55
+                avg_hist_diff_fighter.iloc[fighter_index, i] += s
                 i += 1
 
-        if row.Index < 12000:
-            embed()
+        print(row.Index)
+        # if row.Index < 12000 and row.Index > 11990:
+        #     embed()
 
 
         # 55 thry 76 are the indexes of the differential stats in newvarshistdf

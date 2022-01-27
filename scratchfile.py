@@ -28,6 +28,9 @@ class FightData():
         fighter_stats_updated.to_csv(self.fight_stats, index = False)
 
 
+avg_hist_diff_fights.loc[row.Index, avg_hist_diff_fights.columns.str.startswith("historical")]
+
+
 # Links
 https://medium.com/geekculture/ranking-mma-fighters-using-the-elo-rating-system-2704adbf0c94
 https://www.kaggle.com/calmdownkarm/ufc-predictor-and-notes
