@@ -53,8 +53,48 @@ for x in historical_elo:
         h.append((name, elo))
 h.sort(key=lambda z: z[1])
 
+# 55 thry 76 are the indexes of the differential stats in newvarshistdf
+# avg_hist_diff_fighter.loc[fighter_index, 16:] = new_vars_hist_df.iloc[s.index, 55:]
+# hist avg diff in avg hist diff fight = 55 76
+# for range in (55, 77):
+# 34 thru 54 index of new_vars_hist_df
+# The historical avg differentials are indexes 16 thru 37 in fighter df
 
+########################################
+b = {}
+brier_score = calc_brier_score(avg_hist_diff_fights)
 brier_score_eq = {k: v for k, v in sorted(brier_score.items(), key=lambda item: item[1])}
+#just history
+for k, v in brier_score_eq.items():
+    if "hist" in k:
+        b[k] = v
+> b
+
+{'historical_avg_sig_strikes_attempts_differential': 0.2470074937575214,
+ 'historical_avg_sig_strikes_landed_differential': 0.2472487672199089,
+ 'historical_avg_total_strikes_attempts_differential': 0.2476826706324465,
+ 'historical_avg_total_strikes_landed_differential': 0.247700663713188,
+ 'historical_avg_head_strikes_attempts_differential': 0.24793666043434565,
+ 'historical_avg_head_strikes_landed_differential': 0.24815671144253054,
+ 'historical_avg_distance_strikes_landed_differential': 0.24858716666364045,
+ 'historical_avg_distance_strikes_attempts_differential': 0.24906750026328914,
+ 'historical_avg_clinch_strikes_landed_differential': 0.24932522118879671,
+ 'historical_avg_ground_strikes_attempts_differential': 0.2493466301003702,
+ 'historical_avg_takedowns_landed_differential': 0.24964134442623556,
+ 'historical_avg_clinch_strikes_attempts_differential': 0.2496600143681947,
+ 'historical_avg_body_strikes_attempts_differential': 0.2497966110267182,
+ 'historical_avg_takedowns_attempts_differential': 0.24983921600487144,
+ 'historical_avg_ground_strikes_landed_differential': 0.24990084903839055,
+ 'historical_avg_pass_differential': 0.2499894257001275,
+ 'historical_avg_knockdowns_differential': 0.2500963178412151,
+ 'historical_avg_body_strikes_landed_differential': 0.25010876310833874,
+ 'historical_avg_sub_attempts_differential': 0.25010996094387533,
+ 'historical_avg_leg_strikes_landed_differential': 0.2501242820407882,
+ 'historical_avg_leg_strikes_attempts_differential': 0.25014419103487706}
+
+avg_hist_diff_fights.loc[avg_hist_diff_fights["fighter"] == "Anderson Silva"].historical_avg_sig_strikes_landed_differential
+
+#####################################################
 brier_score_output = \
 {'head_strikes_landed_differential': 0.14943366168949745,
  'sig_strikes_landed_differential': 0.15136372295375505,

@@ -68,6 +68,11 @@ def get_win_method_weight(x: str) -> float:
     return score
 
 def remove_draws(hist_df):
+    """
+    Convert result column from object to int64
+    :param hist_df: historical stats dataframe 
+    :return: cleaned dataframe
+    """
 
     # Just keep the majority dec, unanimous dec, split dec, sub, and KO finishes
     keep = ["M-DEC", "U-DEC", "S-DEC", "SUB", "KO/TKO"]
@@ -77,6 +82,9 @@ def remove_draws(hist_df):
 
     # Remove NC/DQ/Draws
     no_draw_hist_df = finish_only_hist_df[finish_only_hist_df.result != "D"]
+    no_draw_hist_df['result'] = no_draw_hist_df.result.str.replace('W', '1')
+    no_draw_hist_df['result'] = no_draw_hist_df.result.str.replace('L', '0')
+    no_draw_hist_df['result'] = no_draw_hist_df.result.astype(np.int64)
 
     return no_draw_hist_df
 
@@ -160,6 +168,8 @@ def stat_differential(df, stat_index, differential=False, accuracy=False):
             if not prev_fight:
                 prev_fight = {fighter: cur_stat}
                 continue
+
+            # Dealing with 0 in denominator
             elif row.opponent in prev_fight:
 
                 try:
@@ -181,7 +191,6 @@ def stat_differential(df, stat_index, differential=False, accuracy=False):
     return total_stat_diff
 
 def calc_brier_score(new_vars_hist_df):
-    y = new_vars_hist_df["result"]
     # reversals is a string
     train_df = new_vars_hist_df.copy().drop(columns="reversals")
 
@@ -214,60 +223,28 @@ def peak_elo(historical_elo, name):
     peak = s[-1]
     return peak
 
-
-
-
-def main():
-
-    # Create Elo scorer
-    elo_scorer = Elo(k=46)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
-
-    # Update data
-    fighter_df, hist_df = update_data()
-
-    # Invert the data so older fights are first
-    hist_df = hist_df.iloc[::-1]
-
-    # Clean the fight history of draws/NCs
-    no_draw_hist_df = remove_draws(hist_df)
-
-    # Convert result column from object to int64
-    no_draw_hist_df['result'] = no_draw_hist_df.result.str.replace('W', '1')
-    no_draw_hist_df['result'] = no_draw_hist_df.result.str.replace('L', '0')
-    no_draw_hist_df['result'] = no_draw_hist_df.result.astype(np.int64)
-
-    # Add second tier variables
-    # accuracy?
-    # Get a dictionary of row name : index number so we can call the index number in a for loop
-    new_vars_hist_df = no_draw_hist_df.copy()
-
+def get_differential_stats(df):
     differential_stats = {}
-    for idx, stat in enumerate(no_draw_hist_df):
+    for idx, stat in enumerate(df):
         # 13 is where the fight stats start and reversals are the only stat that is a string
         if idx >= 12:
             if stat != 'reversals':
                 differential_stats[stat] = idx
+    return differential_stats
 
+def update_diff_stats(new_vars_hist_df, no_draw_hist_df, differential_stats):
     for stat in differential_stats:                          # this is the stat index within the row tuple
         total_stat_diff = stat_differential(no_draw_hist_df, differential_stats[stat], differential=True)
         new_vars_hist_df[stat+'_differential'] = total_stat_diff
+    return new_vars_hist_df
 
-    # Calculate brier score for each variable
-    brier_score = calc_brier_score(new_vars_hist_df)
-
-    # Remove loser lines (loser lines are just mirror data of winner lines)
-    unmirrored_hist_df = no_draw_hist_df[no_draw_hist_df.result == 1]
-
-    # Add fighters to ELO players
-    elo_scorer = add_fighters(elo_scorer, unmirrored_hist_df)
-
+def run_elo_calc(unmirrored_hist_df, elo_scorer):
+    historical_elo = {}
+    monthly_top25 = {}
     # Set up winner/loser elo dataframes
     elo_win = np.zeros((len(unmirrored_hist_df, )))
     elo_los = np.zeros((len(unmirrored_hist_df, )))
 
-    # Run calc
-    historical_elo = {}
-    monthly_top25 = {}
     prev_date = datetime.datetime.strptime("October 1, 1993", "%B %d, %Y")
     for idx, row in enumerate(unmirrored_hist_df.itertuples()):
 
@@ -300,36 +277,47 @@ def main():
         else:
             historical_elo[loser] = [(winner, elo_scorer[loser])]
 
+    return elo_scorer, historical_elo, monthly_top25, top25
 
-    # Create fighter df with diff avg column and counted fights so we know how much to divide the diff avg from
-    avg_hist_diff_fighter = fighter_df.copy()
-    avg_hist_diff_fighter.loc[:, "counted_fights"] = 0
-
-    # Create fight df with fight stats, diff stats, and historical avg diff up to that fight
+def create_diff_dfs(new_vars_hist_df, avg_hist_diff_fighters):
     # Add new columns to fighter df
     avg_hist_diff_fights = new_vars_hist_df.copy()
     for col in new_vars_hist_df:
         if "differential" in col:
             avg_hist_diff_fights.loc[:, "historical_avg_" + col] = 0
-            avg_hist_diff_fighter.loc[:, "total_" + col] = 0
+            avg_hist_diff_fighters.loc[:, "total_" + col] = 0
 
+    return avg_hist_diff_fights, avg_hist_diff_fighters
+
+def hist_diff_brier_score(df):
+    b = {}
+    brier_score = calc_brier_score(df)
+    brier_score_eq = {k: v for k, v in sorted(brier_score.items(), key=lambda item: item[1])}
+    # just history
+    for k, v in brier_score_eq.items():
+        if "hist" in k:
+            b[k] = v
+    return b
+
+
+def add_hist_diff_stats(new_vars_hist_df, avg_hist_diff_fights, avg_hist_diff_fighters):
     for row in new_vars_hist_df.itertuples():
         f = row.fighter
-        fighter_index = avg_hist_diff_fighter.loc[avg_hist_diff_fighter["name"] == f].index
+        fighter_index = avg_hist_diff_fighters.loc[avg_hist_diff_fighters["name"] == f].index
 
         # Add fighter differentials coming into the fight (not including the fight)
-        fighter_counted_fights = avg_hist_diff_fighter.loc[fighter_index].counted_fights.values[0]
+        fighter_counted_fights = avg_hist_diff_fighters.loc[fighter_index].counted_fights.values[0]
 
         # Get all the total differential values and divide them by
         all_diffs = []
-        for c in avg_hist_diff_fighter.loc[fighter_index].iteritems():
+        for c in avg_hist_diff_fighters.loc[fighter_index].iteritems():
             stat = c[1].values[0]
             col = c[0]
             if "total_" in col:
                 if fighter_counted_fights == 0:
                     all_diffs.append(stat)
                 else:
-                    all_diffs.append(stat/fighter_counted_fights)
+                    all_diffs.append(stat / fighter_counted_fights)
 
         # Get the historical fighter diff stats column names
         cols = []
@@ -339,32 +327,76 @@ def main():
 
         avg_hist_diff_fights.loc[row.Index, cols] = all_diffs
 
-
         # Add to the counted fights
-        avg_hist_diff_fighter.loc[fighter_index, "counted_fights"] += 1
+        avg_hist_diff_fighters.loc[fighter_index, "counted_fights"] += 1
+
         # Add to fighter stats (row values past enum index of 34 are differential stats)
-        i = 16  # fighter diff stat index start, 36 is end
+        i = 16  # fighter diff stat index starts 16, 36 is end
         for idx, s in enumerate(row):
-            if idx > 34: # fight differential stats index start, ends at 55
-                avg_hist_diff_fighter.iloc[fighter_index, i] += s
+            if idx > 34:  # fight differential stats index start, ends at 55
+                avg_hist_diff_fighters.iloc[fighter_index, i] += s
                 i += 1
 
         print(row.Index)
-        # if row.Index < 12000 and row.Index > 11990:
-        #     embed()
 
+    return avg_hist_diff_fighters
 
-        # 55 thry 76 are the indexes of the differential stats in newvarshistdf
-        #avg_hist_diff_fighter.loc[fighter_index, 16:] = new_vars_hist_df.iloc[s.index, 55:]
-        #hist avg diff in avg hist diff fight = 55 76
-        #for range in (55, 77):
-        #34 thru 54 index of new_vars_hist_df
-        # The historical avg differentials are indexes 16 thru 37 in fighter df
+def main():
+
+    # Create Elo scorer
+    elo_scorer = Elo(k=46)  # k = uncertainty, in chess 10 is used at high level, 40 at teen level
+
+    # Update data
+    fighter_df, hist_df = update_data()
+
+    # Invert the data so older fights are first
+    hist_df = hist_df.iloc[::-1]
+
+    # Clean the fight history of draws/NCs
+    no_draw_hist_df = remove_draws(hist_df)
+
+    # Add second tier variables
+    # accuracy?
+    # Get a dictionary of row name : index number so we can call the index number in a for loop
+    new_vars_hist_df = no_draw_hist_df.copy()
+
+    # Calculate differential stats
+    differential_stats = get_differential_stats(no_draw_hist_df)
+
+    # Update the differntial stats to the new dataframe
+    new_vars_hist_df = update_diff_stats(new_vars_hist_df, no_draw_hist_df, differential_stats)
+
+    # Remove loser lines (loser lines are just mirror data of winner lines)
+    unmirrored_hist_df = no_draw_hist_df[no_draw_hist_df.result == 1]
+
+    # Add fighters to ELO players
+    elo_scorer = add_fighters(elo_scorer, unmirrored_hist_df)
+
+    # Create fighter df with diff avg column and counted fights so we know how much to divide the diff avg from
+    avg_hist_diff_fighters = fighter_df.copy()
+    avg_hist_diff_fighters.loc[:, "counted_fights"] = 0
+
+    # Create fight df with fight stats, diff stats, and historical avg diff up to that fight
+    avg_hist_diff_fights, avg_hist_diff_fighters = create_diff_dfs(new_vars_hist_df, avg_hist_diff_fighters)
+
+    # Add differential stats for each fight
+    avg_hist_diff_fighters = add_hist_diff_stats(new_vars_hist_df, avg_hist_diff_fights, avg_hist_diff_fighters)
+
+    # Prediction value for each differential stat at time of fight
+    b = hist_diff_brier_score(avg_hist_diff_fights)
+
+    # Calculate brier score for each variable
+    #brier_score = calc_brier_score(new_vars_hist_df)
+
+    # Run Elo calc
+    elo_scorer, historical_elo, monthly_top25, top25 = run_elo_calc(unmirrored_hist_df, elo_scorer)
 
     # > monthly_top25["6/2010"]
     # > top25
     # > elo_scorer["Anderson Silva"]
     # > peak_elo(historical_elo, "Anderson Silva")
+    # Prediction value for each differential stat at time of fight
+    # > b
 
     embed()
 
